@@ -1,22 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use Illuminate\Http\Request;
 use App\Models\Post;
-use App\Interfaces\PostRepositoryInterface;
-use Auth;
-
-class PostController extends Controller
+class PostControllerPrev extends Controller
 {
-    private PostRepositoryInterface $postRepository;
-
-    public function __construct(PostRepositoryInterface $postRepository) {
-        $this->postRepository = $postRepository;
-    }
-
-    public function index() {
-        $posts = $this->postRepository->getAllPosts();
+    public function index()
+    {
+        $posts = auth()->user()->posts;
  
         return response()->json([
             'success' => true,
@@ -24,8 +15,9 @@ class PostController extends Controller
         ]);
     }
  
-    public function show($id) {
-        $post = $this->postRepository->getPostById($id);
+    public function show($id)
+    {
+        $post = auth()->user()->posts()->find($id);
  
         if (!$post) {
             return response()->json([
@@ -40,22 +32,21 @@ class PostController extends Controller
         ], 400);
     }
  
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         $this->validate($request, [
             'title' => 'required',
             'description' => 'required'
         ]);
-
-        $post = [
-            'title' => $request->title,
-            'description' => $request->description,
-            'user_id' => Auth::id()
-        ];
  
-        if ($this->postRepository->createPost($post))
+        $post = new Post();
+        $post->title = $request->title;
+        $post->description = $request->description;
+ 
+        if (auth()->user()->posts()->save($post))
             return response()->json([
                 'success' => true,
-                'data' => $post
+                'data' => $post->toArray()
             ]);
         else
             return response()->json([
@@ -76,6 +67,7 @@ class PostController extends Controller
         }
  
         $updated = $post->fill($request->all())->save();
+ 
         if ($updated)
             return response()->json([
                 'success' => true
@@ -87,8 +79,9 @@ class PostController extends Controller
             ], 500);
     }
  
-    public function destroy($id) {
-        $post = $this->postRepository->getPostById($id);
+    public function destroy($id)
+    {
+        $post = auth()->user()->posts()->find($id);
  
         if (!$post) {
             return response()->json([
@@ -97,7 +90,7 @@ class PostController extends Controller
             ], 400);
         }
  
-        if ($this->postRepository->deletePost($id)) {
+        if ($post->delete()) {
             return response()->json([
                 'success' => true
             ]);
